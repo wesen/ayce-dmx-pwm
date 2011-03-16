@@ -83,10 +83,12 @@ extern "C" {
   /** Get the absolute value of x. **/
 #define ABS(x) ((x) < 0 ? -(x) : (x))
 
+#ifndef HOST
 #include <util/delay.h>
   /** Use the arduino convention to delay inside the code. **/
 #define delay(ms) _delay_ms(ms)
 #define delayMicroseconds(us) _delay_us(us)
+#endif
 
     /**
    * @}

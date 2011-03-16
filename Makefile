@@ -17,7 +17,7 @@ F_CPU = 16000000L
 CFLAGS += -DF_CPU=$(F_CPU)
 
 PROJ=ayce-dmx-pwm
-SRCS=main.c
+SRCS=main.c pwm.c
 
 all: $(PROJ).hex
 
@@ -52,7 +52,7 @@ $(PROJ).elf: $(SRCS:.c=.o)
 #### upload targets
 
 upload: clean $(PROJ).srec 
-	avrdude -p $(AVRDUDE_ARCH) -P usb -c $(AVRDUDE_PROG) -U flash:w:$(PROJ).srec
+	avrdude -V -p $(AVRDUDE_ARCH) -P usb -c $(AVRDUDE_PROG) -U flash:w:$(PROJ).srec
 
 verify: $(PROJ).srec $(PROJ).ee_srec
 	$(UISP) --segment=flash $(UISP_TARGET) --verify if=$(PROJ).srec
