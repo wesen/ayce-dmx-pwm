@@ -14,6 +14,7 @@ uint16_t readLEDCurrent();
 
 void initPWM();
 void setRGBWColor(uint8_t red, uint8_t green, uint8_t blue, uint8_t white);
+void setRGBWColorImmediate(uint16_t red, uint16_t green, uint16_t blue, uint16_t white);
 
 #define LED_PIN PD7
 

@@ -45,9 +45,6 @@ void initBoard() {
 
   dmxAddress = readAddress();
 
-  initPWM();
-
-  sei();
 }
 
 /*
@@ -82,17 +79,42 @@ uint16_t readLEDCurrent() {
   return 0;
 }
 
-int main(void) {
-  initBoard();
-
+/* pulse. */
+void main1(void) {
   setRGBWColor(1, 1, 1, 0);
   
   uint16_t delayDuration = 10 * dmxAddress;
-  uint8_t i = 0;
+  int i = 0;
+  int direction = 1;
   for (;;) {
-    setRGBWColor(i, i, i, 0);
-    delay(1);
-    i++;
+    if (i < 0) {
+      i = 0;
+      direction = 1;
+    }
+    if (i > 255) {
+      i = 255;
+      direction = -1;
+    }
+    setRGBWColor(i, i, i, i);
+    i += direction;
+    delay(10);
   }
+}
+
+void main2(void) {
+  uint16_t address = readAddress();
+  address = 0xAAAA;
+  setRGBWColorImmediate(address, address, address, address);
+  for (;;) {
+    delay(100);
+  }
+}
+
+int main(void) {
+  initBoard();
+  initPWM();
+  sei();
+
+  main1();
   return 0;
 }

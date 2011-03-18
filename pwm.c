@@ -12,6 +12,7 @@ uint8_t pwmIrqData[2][12] = { { 0 } };
 uint8_t curPwmIdx = 0;
 uint8_t *curPwmIrqData = pwmIrqData[0];
 uint8_t *nextPwmIrqData = pwmIrqData[1];
+uint8_t hasNextIrqData = 0;
 
 uint16_t exptTable[256] = {
     0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 
@@ -46,20 +47,21 @@ uint16_t exptTable[256] = {
 void initPWM() {
   uint8_t sreg_tmp = SREG;
   cli();
-  
-  TCCR1B = _BV(CS10) | _BV(WGM12);
+
+  /* prescale / 8 */
+  TCCR1B = _BV(CS11) | _BV(WGM12);
   TCCR1A = 0;
   OCR1A = 1;
   SET_BIT(TIMSK, OCIE1A);
   TCNT1 = 0;
-  TCNT2 = 0;
 
   SREG = sreg_tmp;
 }
 
-#define PWM_MUL 4
+/* prescale  / 8 -> 48 cycles per PWM_MUL */
+#define PWM_MUL 6
 
-uint16_t delayCycles[12] = {
+static const uint16_t delayCycles[12] = {
   1 * PWM_MUL, 2 * PWM_MUL, 4 * PWM_MUL, 8 * PWM_MUL, /* 4 lower ones are handled directly from irq */
   16 * PWM_MUL, 32 * PWM_MUL, 64 * PWM_MUL, 128 * PWM_MUL,
   256 * PWM_MUL, 512 * PWM_MUL, 1024 * PWM_MUL, 2048 * PWM_MUL
@@ -67,29 +69,46 @@ uint16_t delayCycles[12] = {
 
 /* pwm irq */
 SIGNAL(TIMER1_COMPA_vect) {
+  TOGGLE_BIT(PORTD, LED_PIN);
+
+  /* stop timer */
+  TCCR1B = _BV(WGM12);
+  CLEAR_BIT(TIMSK, OCIE1A);
   
+  uint8_t curVal;
   if (curPwmIdx == 0) {
-    uint8_t curVal = PORTD & 0x87;
     /* handle first 4 values directly from irq, including delay. */
+    curVal = PORTD & ~(_BV(PWM1_PIN) | _BV(PWM2_PIN) | _BV(PWM3_PIN) | _BV(PWM4_PIN));
     PORTD = curVal | curPwmIrqData[0];
-    _delay_loop_1(PWM_MUL);
+    _delay_loop_1(4);
 
+    curVal = PORTD & ~(_BV(PWM1_PIN) | _BV(PWM2_PIN) | _BV(PWM3_PIN) | _BV(PWM4_PIN));
     PORTD = curVal| curPwmIrqData[1];
-    _delay_loop_1(2 * PWM_MUL);
+    _delay_loop_1(40);
 
-    PORTD = curVal | curPwmIrqData[2];
-    _delay_loop_1(4 * PWM_MUL);
-    curPwmIdx = 3;
+    curPwmIdx = 2;
   }
 
-  PORTD = (PORTD & 0x87) | curPwmIrqData[curPwmIdx];
+  curVal = PORTD & ~(_BV(PWM1_PIN) | _BV(PWM2_PIN) | _BV(PWM3_PIN) | _BV(PWM4_PIN));
+  PORTD = (curVal) | curPwmIrqData[curPwmIdx];
   OCR1A = delayCycles[curPwmIdx];
-  TCNT1 = 0;
+  
   curPwmIdx++;
   if (curPwmIdx >= 12) {
-    TOGGLE_BIT(PORTD, LED_PIN);
     curPwmIdx = 0;
+    if (hasNextIrqData) {
+      uint8_t *tmpPwmIrqData = curPwmIrqData;
+      curPwmIrqData = nextPwmIrqData;
+      nextPwmIrqData = tmpPwmIrqData;
+      hasNextIrqData = 0;
+    }
   }
+
+  TCNT1 = 0;
+  /* enable timer */
+  TCCR1B = _BV(CS11) | _BV(WGM12);
+  SET_BIT(TIMSK, OCIE1A);
+  
 }
 #endif
 
@@ -98,8 +117,6 @@ void setRGBWColor(uint8_t red, uint8_t green, uint8_t blue, uint8_t white) {
   uint16_t g12 = exptTable[green];
   uint16_t b12 = exptTable[blue];
   uint16_t w12 = exptTable[white];
-
-  r12 = red;
 
   uint8_t i;
   for (i = 0; i < 12; i++) {
@@ -119,9 +136,34 @@ void setRGBWColor(uint8_t red, uint8_t green, uint8_t blue, uint8_t white) {
   /* swap buffers */
   uint8_t sreg_tmp = SREG;
   cli();
-  uint8_t *tmpPwmIrqData = curPwmIrqData;
-  curPwmIrqData = nextPwmIrqData;
-  nextPwmIrqData = tmpPwmIrqData;
-  //  curPwmIdx = 0;
+  hasNextIrqData = 1;
+  SREG = sreg_tmp;
+}
+
+void setRGBWColorImmediate(uint16_t red, uint16_t green, uint16_t blue, uint16_t white) {
+  uint16_t r12 = red;
+  uint16_t g12 = green;
+  uint16_t b12 = blue;
+  uint16_t w12 = white;
+
+  uint8_t i;
+  for (i = 0; i < 12; i++) {
+    nextPwmIrqData[i] =
+      ((r12 & 1) << PWM4_PIN) |
+      ((g12 & 1) << PWM3_PIN) |
+      ((b12 & 1) << PWM2_PIN) |
+      ((w12 & 1) << PWM1_PIN);
+    /* invert */
+    //    nextPwmIrqData[i] = ~nextPwmIrqData[i] & 0x78; /* 0b01111000 */
+    r12 >>= 1;
+    b12 >>= 1;
+    g12 >>= 1;
+    w12 >>= 1;
+  }
+
+  /* swap buffers */
+  uint8_t sreg_tmp = SREG;
+  cli();
+  hasNextIrqData = 1;
   SREG = sreg_tmp;
 }
