@@ -3,10 +3,10 @@
 
 #include "common.h"
 #include "board.h"
+#include "dmx.h"
 
 /* global variables. */
-/* dmx address. */
-uint8_t dmxAddress = 0;
+uint8_t pwmData[4];
 
 /*
  * Initialize the board
@@ -43,8 +43,7 @@ void initBoard() {
   SET_BIT(PORTB, ADDRESS7_PIN);
   SET_BIT(PORTB, ADDRESS8_PIN);
 
-  dmxAddress = readAddress();
-
+  initDMX(readAddress(), pwmData, 4);
 }
 
 /*
@@ -79,25 +78,37 @@ uint16_t readLEDCurrent() {
   return 0;
 }
 
+void mainDMX(void) {
+  for (;;) {
+    setDMXAddress(readAddress());
+    setRGBWColor(pwmData[0], pwmData[1], pwmData[2], pwmData[3]);
+    delay(10);
+  }
+}
+
 /* pulse. */
 void main1(void) {
   setRGBWColor(1, 1, 1, 0);
+
+  int duration = 100;
+
+  int low = 0;
+  int high = 2558;
   
-  uint16_t delayDuration = 10 * dmxAddress;
   int i = 0;
   int direction = 1;
   for (;;) {
-    if (i < 0) {
-      i = 0;
+    if (i < low) {
+      i = low;
       direction = 1;
     }
-    if (i > 255) {
-      i = 255;
+    if (i > high) {
+      i = high;
       direction = -1;
     }
-    setRGBWColor(i, i, i, i);
+    setRGBWColorImmediate(i, i, i, i);
     i += direction;
-    delay(10);
+    delay(duration);
   }
 }
 
@@ -110,11 +121,41 @@ void main2(void) {
   }
 }
 
+void main3(void) {
+  int duration = 1000;
+  int low = 1;
+  int high = low;
+
+  /*
+  duration = 100;
+  low = 0;
+  high = 15;
+  */
+
+  CLEAR_LED();
+  int i = low;
+  int direction = 1;
+  for (;;) {
+    if (i <= low) {
+      i = low;
+      direction = 1;
+    }
+    if (i >= high) {
+      i = high;
+      direction = -1;
+      //      SET_LED();
+    }
+    setRGBWColorImmediate(i, i, i, i);
+    i += direction;
+    delay(duration);
+  }
+}
+
 int main(void) {
   initBoard();
   initPWM();
   sei();
 
-  main1();
+  mainDMX();
   return 0;
 }

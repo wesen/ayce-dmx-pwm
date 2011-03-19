@@ -15,32 +15,32 @@ uint8_t *nextPwmIrqData = pwmIrqData[1];
 uint8_t hasNextIrqData = 0;
 
 uint16_t exptTable[256] = {
-    0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 
-    2, 3, 3, 3, 3, 4, 4, 4, 5, 5, 
-    5, 5, 6, 6, 7, 7, 7, 8, 8, 8, 
-    9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 
-    14, 14, 15, 15, 16, 16, 17, 18, 18, 19, 
-    20, 20, 21, 22, 22, 23, 24, 25, 26, 26, 
-    27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 
-    37, 38, 39, 40, 42, 43, 44, 45, 47, 48, 
-    49, 51, 52, 54, 55, 57, 59, 60, 62, 64, 
-    65, 67, 69, 71, 73, 75, 77, 79, 81, 83, 
-    86, 88, 90, 93, 95, 98, 100, 103, 106, 109, 
-    112, 115, 118, 121, 124, 127, 130, 134, 137, 141, 
-    145, 148, 152, 156, 160, 164, 169, 173, 178, 182, 
-    187, 192, 197, 202, 207, 212, 218, 223, 229, 235, 
-    241, 247, 253, 260, 266, 273, 280, 287, 294, 302, 
-    309, 317, 325, 333, 342, 350, 359, 368, 378, 387, 
-    397, 407, 417, 428, 438, 449, 461, 472, 484, 496, 
-    509, 522, 535, 548, 562, 576, 590, 605, 620, 636, 
-    651, 668, 684, 701, 719, 737, 755, 774, 793, 813, 
-    833, 854, 876, 897, 920, 943, 966, 990, 1015, 1040, 
-    1066, 1092, 1119, 1147, 1176, 1205, 1235, 1266, 1297, 1329, 
-    1362, 1396, 1431, 1466, 1502, 1540, 1578, 1617, 1657, 1698, 
-    1740, 1783, 1828, 1873, 1919, 1967, 2016, 2066, 2117, 2169, 
-    2223, 2278, 2334, 2392, 2451, 2512, 2574, 2638, 2703, 2770, 
-    2839, 2909, 2981, 3055, 3130, 3208, 3287, 3368, 3451, 3537, 
-    3624, 3714, 3806, 3900, 3996, 4095, 
+  0, 0, 0, 1, 1, 1, 1, 2, 2, 2,  /* 0 - 10 */
+  2, 3, 3, 3, 3, 4, 4, 4, 5, 5,  /* 10 - 20 */
+  5, 5, 6, 6, 7, 7, 7, 8, 8, 8,  /* 20 - 30 */
+  9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 
+  14, 14, 15, 15, 16, 16, 17, 18, 18, 19, 
+  20, 20, 21, 22, 22, 23, 24, 25, 26, 26, /* 50 - 60 */
+  27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 
+  37, 38, 39, 40, 42, 43, 44, 45, 47, 48, 
+  49, 51, 52, 54, 55, 57, 59, 60, 62, 64, 
+  65, 67, 69, 71, 73, 75, 77, 79, 81, 83, 
+  86, 88, 90, 93, 95, 98, 100, 103, 106, 109, /* 100 - 110 */
+  112, 115, 118, 121, 124, 127, 130, 134, 137, 141, 
+  145, 148, 152, 156, 160, 164, 169, 173, 178, 182, 
+  187, 192, 197, 202, 207, 212, 218, 223, 229, 235, 
+  241, 247, 253, 260, 266, 273, 280, 287, 294, 302, 
+  309, 317, 325, 333, 342, 350, 359, 368, 378, 387, /* 150 - 160 */
+  397, 407, 417, 428, 438, 449, 461, 472, 484, 496, 
+  509, 522, 535, 548, 562, 576, 590, 605, 620, 636, 
+  651, 668, 684, 701, 719, 737, 755, 774, 793, 813, 
+  833, 854, 876, 897, 920, 943, 966, 990, 1015, 1040, 
+  1066, 1092, 1119, 1147, 1176, 1205, 1235, 1266, 1297, 1329, /* 200 */
+  1362, 1396, 1431, 1466, 1502, 1540, 1578, 1617, 1657, 1698, 
+  1740, 1783, 1828, 1873, 1919, 1967, 2016, 2066, 2117, 2169, 
+  2223, 2278, 2334, 2392, 2451, 2512, 2574, 2638, 2703, 2770, 
+  2839, 2909, 2981, 3055, 3130, 3208, 3287, 3368, 3451, 3537, 
+  3624, 3714, 3806, 3900, 3996, 4095, /* 250 */
 };
 
 #ifndef HOST 
@@ -48,51 +48,90 @@ void initPWM() {
   uint8_t sreg_tmp = SREG;
   cli();
 
-  /* prescale / 8 */
-  TCCR1B = _BV(CS11) | _BV(WGM12);
+  /* prescale / 1 */
+  TCCR1B = _BV(CS10) | _BV(WGM12);
   TCCR1A = 0;
+  TCNT1 = 0;
   OCR1A = 1;
   SET_BIT(TIMSK, OCIE1A);
-  TCNT1 = 0;
 
   SREG = sreg_tmp;
 }
 
 /* prescale  / 8 -> 48 cycles per PWM_MUL */
-#define PWM_MUL 6
+#define PWM_MUL 1
 
-static const uint16_t delayCycles[12] = {
-  1 * PWM_MUL, 2 * PWM_MUL, 4 * PWM_MUL, 8 * PWM_MUL, /* 4 lower ones are handled directly from irq */
-  16 * PWM_MUL, 32 * PWM_MUL, 64 * PWM_MUL, 128 * PWM_MUL,
-  256 * PWM_MUL, 512 * PWM_MUL, 1024 * PWM_MUL, 2048 * PWM_MUL
+/* slightly higher than 2 factor =~ 2.01 for each step */
+static const
+uint16_t delayCycles[12] = {
+  1, 2, 3, 4,
+  15, 68,
+  217, 510, 1100, 2290, 4700, 9400, 
 };
+
+#define SET_PWM(val) { \
+  PORTD = (PORTD & ~(_BV(PWM1_PIN) | _BV(PWM2_PIN) | _BV(PWM3_PIN) | _BV(PWM4_PIN))) | (val); \
+  asm("nop"); \ 
+  asm("nop"); \
+  asm("nop"); \
+  asm("nop"); \
+  asm("nop"); \
+}
+
+#define SET_PWM_2(val) { \
+  PORTD = curVal | val; \
+}
 
 /* pwm irq */
 SIGNAL(TIMER1_COMPA_vect) {
-  TOGGLE_BIT(PORTD, LED_PIN);
-
   /* stop timer */
   TCCR1B = _BV(WGM12);
-  CLEAR_BIT(TIMSK, OCIE1A);
+  //  CLEAR_BIT(TIMSK, OCIE1A);
   
   uint8_t curVal;
   if (curPwmIdx == 0) {
+    SET_LED();
+    uint8_t curVal = (PORTD & ~(_BV(PWM1_PIN) | _BV(PWM2_PIN) | _BV(PWM3_PIN) | _BV(PWM4_PIN)));
     /* handle first 4 values directly from irq, including delay. */
-    curVal = PORTD & ~(_BV(PWM1_PIN) | _BV(PWM2_PIN) | _BV(PWM3_PIN) | _BV(PWM4_PIN));
-    PORTD = curVal | curPwmIrqData[0];
-    _delay_loop_1(4);
-
-    curVal = PORTD & ~(_BV(PWM1_PIN) | _BV(PWM2_PIN) | _BV(PWM3_PIN) | _BV(PWM4_PIN));
-    PORTD = curVal| curPwmIrqData[1];
-    _delay_loop_1(40);
-
-    curPwmIdx = 2;
+    SET_PWM(curPwmIrqData[0]);
+    asm("nop");
+    SET_PWM(curPwmIrqData[1]);
+    asm("nop");
+    asm("nop");
+    SET_PWM(curPwmIrqData[2]);
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    SET_PWM(curPwmIrqData[3]);
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    asm("nop");
+    
+    for (curPwmIdx = 4; curPwmIdx < 5; curPwmIdx++) {
+      SET_PWM(curPwmIrqData[curPwmIdx]);
+      _delay_loop_1(delayCycles[curPwmIdx]);
+    }
+    CLEAR_LED();
   }
 
-  curVal = PORTD & ~(_BV(PWM1_PIN) | _BV(PWM2_PIN) | _BV(PWM3_PIN) | _BV(PWM4_PIN));
-  PORTD = (curVal) | curPwmIrqData[curPwmIdx];
+  SET_PWM(curPwmIrqData[curPwmIdx]);
+
   OCR1A = delayCycles[curPwmIdx];
-  
+  /* enable timer */
+  TCNT1 = 0;
+  //  SET_BIT(TIMSK, OCIE1A);
+  TCCR1B = _BV(CS10) | _BV(WGM12);
+
   curPwmIdx++;
   if (curPwmIdx >= 12) {
     curPwmIdx = 0;
@@ -104,10 +143,6 @@ SIGNAL(TIMER1_COMPA_vect) {
     }
   }
 
-  TCNT1 = 0;
-  /* enable timer */
-  TCCR1B = _BV(CS11) | _BV(WGM12);
-  SET_BIT(TIMSK, OCIE1A);
   
 }
 #endif

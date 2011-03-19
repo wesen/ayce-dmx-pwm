@@ -17,7 +17,7 @@ F_CPU = 16000000L
 CFLAGS += -DF_CPU=$(F_CPU)
 
 PROJ=ayce-dmx-pwm
-SRCS=main.c pwm.c
+SRCS=main.c pwm.c dmx.c
 
 all: $(PROJ).hex
 

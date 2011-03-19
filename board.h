@@ -3,7 +3,6 @@
 
 #include "common.h"
 
-extern uint8_t dmxAddress;
 extern uint8_t *curPwmIrqData;
 extern uint8_t *nextPwmIrqData;
 
@@ -37,8 +36,9 @@ void setRGBWColorImmediate(uint16_t red, uint16_t green, uint16_t blue, uint16_t
 #ifndef HOST
 
 /* set LED. */
-#define SET_LED() { SET_BIT(PORTD, LED_PIN); }
-#define CLEAR_LED() { CLEAR_BIT(PORTD, LED_PIN); }
+#define SET_LED() { CLEAR_BIT(PORTD, LED_PIN); }
+#define CLEAR_LED() { SET_BIT(PORTD, LED_PIN); }
+#define TOGGLE_LED() { TOGGLE_BIT(PORTD, LED_PIN); }
 
 /* set pwm. */
 #define SET_PWM1() { SET_BIT(PORTD, PWM1_PIN); }
