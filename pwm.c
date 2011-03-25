@@ -8,13 +8,13 @@
 #include "board.h"
 
 /* rotated irq pwm data. */
-uint8_t pwmIrqData[2][12] = { { 0 } };
-uint8_t curPwmIdx = 0;
-uint8_t *curPwmIrqData = pwmIrqData[0];
-uint8_t *nextPwmIrqData = pwmIrqData[1];
-uint8_t hasNextIrqData = 0;
+#define PWM_BITS 12
+#define concat(s, y) x ## y
+#define xstr(s) str(s)
+#define str(s) #s
+#define exptTable concat(exptTable_, str(PWM_BITS))
 
-uint16_t exptTable[256] = {
+uint16_t exptTable_12[256] = {
   0, 0, 0, 1, 1, 1, 1, 2, 2, 2,  /* 0 - 10 */
   2, 3, 3, 3, 3, 4, 4, 4, 5, 5,  /* 10 - 20 */
   5, 5, 6, 6, 7, 7, 7, 8, 8, 8,  /* 20 - 30 */
@@ -43,6 +43,35 @@ uint16_t exptTable[256] = {
   3624, 3714, 3806, 3900, 3996, 4095, /* 250 */
 };
 
+uint16_t exptTable_10[256] = {
+    0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 
+    3, 4, 4, 5, 5, 5, 6, 6, 7, 7, 
+    7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 
+    12, 13, 13, 14, 14, 15, 15, 16, 17, 17, 
+    18, 18, 19, 20, 20, 21, 21, 22, 23, 23, 
+    24, 25, 25, 26, 27, 28, 28, 29, 30, 31, 
+    32, 32, 33, 34, 35, 36, 37, 37, 38, 39, 
+    40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 
+    50, 51, 53, 54, 55, 56, 57, 58, 60, 61, 
+    62, 63, 65, 66, 67, 69, 70, 72, 73, 74, 
+    76, 77, 79, 80, 82, 84, 85, 87, 89, 90, 
+    92, 94, 96, 97, 99, 101, 103, 105, 107, 109, 
+    111, 113, 115, 117, 119, 121, 123, 126, 128, 130, 
+    133, 135, 137, 140, 142, 145, 147, 150, 153, 155, 
+    158, 161, 164, 166, 169, 172, 175, 178, 181, 184, 
+    188, 191, 194, 197, 201, 204, 208, 211, 215, 218, 
+    222, 226, 230, 234, 238, 242, 246, 250, 254, 258, 
+    262, 267, 271, 276, 280, 285, 290, 295, 299, 304, 
+    309, 315, 320, 325, 330, 336, 341, 347, 353, 358, 
+    364, 370, 376, 382, 389, 395, 401, 408, 415, 421, 
+    428, 435, 442, 449, 456, 464, 471, 479, 487, 495, 
+    503, 511, 519, 527, 536, 544, 553, 562, 571, 580, 
+    589, 599, 608, 618, 628, 638, 648, 658, 669, 680, 
+    690, 701, 713, 724, 735, 747, 759, 771, 783, 796, 
+    808, 821, 834, 847, 861, 875, 888, 902, 917, 931, 
+    946, 961, 976, 991, 1007, 1023, 
+};
+
 #ifndef HOST 
 void initPWM() {
   uint8_t sreg_tmp = SREG;
@@ -52,153 +81,63 @@ void initPWM() {
   TCCR1B = _BV(CS10) | _BV(WGM12);
   TCCR1A = 0;
   TCNT1 = 0;
-  OCR1A = 1;
+  OCR1A = F_CPU / (100L * 1024L); // for 10 bits
   SET_BIT(TIMSK, OCIE1A);
 
   SREG = sreg_tmp;
 }
 
-/* prescale  / 8 -> 48 cycles per PWM_MUL */
-#define PWM_MUL 1
-
-/* slightly higher than 2 factor =~ 2.01 for each step */
-static const
-uint16_t delayCycles[12] = {
-  1, 2, 3, 4,
-  15, 68,
-  217, 510, 1100, 2290, 4700, 9400, 
-};
-
-#define SET_PWM(val) { \
-  PORTD = (PORTD & ~(_BV(PWM1_PIN) | _BV(PWM2_PIN) | _BV(PWM3_PIN) | _BV(PWM4_PIN))) | (val); \
-  asm("nop"); \ 
-  asm("nop"); \
-  asm("nop"); \
-  asm("nop"); \
-  asm("nop"); \
-}
-
-#define SET_PWM_2(val) { \
-  PORTD = curVal | val; \
-}
+static inline void pwmStandard();
 
 /* pwm irq */
 SIGNAL(TIMER1_COMPA_vect) {
-  /* stop timer */
-  TCCR1B = _BV(WGM12);
-  //  CLEAR_BIT(TIMSK, OCIE1A);
-  
-  uint8_t curVal;
-  if (curPwmIdx == 0) {
-    SET_LED();
-    uint8_t curVal = (PORTD & ~(_BV(PWM1_PIN) | _BV(PWM2_PIN) | _BV(PWM3_PIN) | _BV(PWM4_PIN)));
-    /* handle first 4 values directly from irq, including delay. */
-    SET_PWM(curPwmIrqData[0]);
-    asm("nop");
-    SET_PWM(curPwmIrqData[1]);
-    asm("nop");
-    asm("nop");
-    SET_PWM(curPwmIrqData[2]);
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    SET_PWM(curPwmIrqData[3]);
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    asm("nop");
-    
-    for (curPwmIdx = 4; curPwmIdx < 5; curPwmIdx++) {
-      SET_PWM(curPwmIrqData[curPwmIdx]);
-      _delay_loop_1(delayCycles[curPwmIdx]);
-    }
-    CLEAR_LED();
-  }
-
-  SET_PWM(curPwmIrqData[curPwmIdx]);
-
-  OCR1A = delayCycles[curPwmIdx];
-  /* enable timer */
-  TCNT1 = 0;
-  //  SET_BIT(TIMSK, OCIE1A);
-  TCCR1B = _BV(CS10) | _BV(WGM12);
-
-  curPwmIdx++;
-  if (curPwmIdx >= 12) {
-    curPwmIdx = 0;
-    if (hasNextIrqData) {
-      uint8_t *tmpPwmIrqData = curPwmIrqData;
-      curPwmIrqData = nextPwmIrqData;
-      nextPwmIrqData = tmpPwmIrqData;
-      hasNextIrqData = 0;
-    }
-  }
-
-  
+  pwmStandard();
 }
 #endif
 
-void setRGBWColor(uint8_t red, uint8_t green, uint8_t blue, uint8_t white) {
-  uint16_t r12 = exptTable[red];
-  uint16_t g12 = exptTable[green];
-  uint16_t b12 = exptTable[blue];
-  uint16_t w12 = exptTable[white];
+uint16_t redPwmCount = 0;
+uint16_t greenPwmCount = 0;
+uint16_t bluePwmCount = 0;
+uint16_t whitePwmCount = 0;
 
-  uint8_t i;
-  for (i = 0; i < 12; i++) {
-    nextPwmIrqData[i] =
-      ((r12 & 1) << PWM4_PIN) |
-      ((g12 & 1) << PWM3_PIN) |
-      ((b12 & 1) << PWM2_PIN) |
-      ((w12 & 1) << PWM1_PIN);
-    /* invert */
-    //    nextPwmIrqData[i] = ~nextPwmIrqData[i] & 0x78; /* 0b01111000 */
-    r12 >>= 1;
-    b12 >>= 1;
-    g12 >>= 1;
-    w12 >>= 1;
+static inline void pwmStandard() {
+  static uint16_t pwmCount = 1023;
+
+  uint8_t pwmVal = 0;
+
+  if (pwmCount < redPwmCount) {
+    SET_BIT(pwmVal, PWM_RED_PIN);
   }
+  if (pwmCount < bluePwmCount) {
+    SET_BIT(pwmVal, PWM_BLUE_PIN);
+  }
+  if (pwmCount < greenPwmCount) {
+    SET_BIT(pwmVal, PWM_GREEN_PIN);
+  }
+  if (pwmCount < whitePwmCount) {
+    SET_BIT(pwmVal, PWM_WHITE_PIN);
+  }
+  pwmCount = (pwmCount - 1) & 1023;
 
-  /* swap buffers */
+  PORTD = (PORTD & ~(_BV(PWM1_PIN) | _BV(PWM2_PIN) | _BV(PWM3_PIN) | _BV(PWM4_PIN))) | (pwmVal);
+}
+
+void setRGBWColor(uint8_t red, uint8_t green, uint8_t blue, uint8_t white) {
   uint8_t sreg_tmp = SREG;
   cli();
-  hasNextIrqData = 1;
+  redPwmCount = exptTable_10[red];
+  greenPwmCount = exptTable_10[green];
+  bluePwmCount = exptTable_10[blue];
+  whitePwmCount = exptTable_10[white];
   SREG = sreg_tmp;
 }
 
 void setRGBWColorImmediate(uint16_t red, uint16_t green, uint16_t blue, uint16_t white) {
-  uint16_t r12 = red;
-  uint16_t g12 = green;
-  uint16_t b12 = blue;
-  uint16_t w12 = white;
-
-  uint8_t i;
-  for (i = 0; i < 12; i++) {
-    nextPwmIrqData[i] =
-      ((r12 & 1) << PWM4_PIN) |
-      ((g12 & 1) << PWM3_PIN) |
-      ((b12 & 1) << PWM2_PIN) |
-      ((w12 & 1) << PWM1_PIN);
-    /* invert */
-    //    nextPwmIrqData[i] = ~nextPwmIrqData[i] & 0x78; /* 0b01111000 */
-    r12 >>= 1;
-    b12 >>= 1;
-    g12 >>= 1;
-    w12 >>= 1;
-  }
-
-  /* swap buffers */
   uint8_t sreg_tmp = SREG;
   cli();
-  hasNextIrqData = 1;
+  redPwmCount = red;
+  greenPwmCount = green;
+  bluePwmCount = blue;
+  whitePwmCount = white;
   SREG = sreg_tmp;
 }
