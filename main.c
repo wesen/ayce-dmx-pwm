@@ -52,16 +52,19 @@ void initBoard() {
 uint8_t readAddress() {
   uint8_t address = 0;
 
-  address |= IS_BIT_SET(PINC, ADDRESS1_PIN);
-  address |= (IS_BIT_SET(PINC, ADDRESS2_PIN)) << 1;
-  address |= (IS_BIT_SET(PINC, ADDRESS3_PIN)) << 2;
-  address |= (IS_BIT_SET(PINC, ADDRESS4_PIN)) << 3;
-  address |= (IS_BIT_SET(PINC, ADDRESS5_PIN)) << 4;
-  address |= (IS_BIT_SET(PINB, ADDRESS6_PIN)) << 5;
-  address |= (IS_BIT_SET(PINB, ADDRESS7_PIN)) << 6;
-  address |= (IS_BIT_SET(PINB, ADDRESS8_PIN)) << 7;
+  uint8_t val = PINC;
+  uint8_t val2 = PINB;
 
-  return address + 1;
+  address |= IS_BIT_SET(val, ADDRESS1_PIN);
+  address |= (IS_BIT_SET(val, ADDRESS2_PIN)) << 1;
+  address |= (IS_BIT_SET(val, ADDRESS3_PIN)) << 2;
+  address |= (IS_BIT_SET(val, ADDRESS4_PIN)) << 3;
+  address |= (IS_BIT_SET(val, ADDRESS5_PIN)) << 4;
+  address |= (IS_BIT_SET(val2, ADDRESS6_PIN)) << 5;
+  address |= (IS_BIT_SET(val2, ADDRESS7_PIN)) << 6;
+  address |= (IS_BIT_SET(val2, ADDRESS8_PIN)) << 7;
+
+  return address;
 }
 
 /*
@@ -78,11 +81,34 @@ uint16_t readLEDCurrent() {
   return 0;
 }
 
+extern uint16_t exptTable_10[256];
+                                 
 void mainDMX(void) {
+  uint8_t address = readAddress();
+  setDMXAddress(readAddress());
+
+  int i;
   for (;;) {
+    uint8_t address = readAddress();
     setDMXAddress(readAddress());
-    setRGBWColor(pwmData[0], pwmData[1], pwmData[2], pwmData[3]);
-    delay(10);
+    
+    if (address == 0) {
+      //      uint8_t address = readAddress();
+      static int value = 0;
+      static int direction = 1;
+
+      if (value <= 0) {
+        direction = 1;
+      } else if (value >= 250) {
+        direction = -1;
+      }
+      setRGBWColor(value, value, value, value);
+      value += direction;
+      delay(1);
+    } else {
+      setRGBWColor(pwmData[0], pwmData[1], pwmData[2], pwmData[3]);
+      delay(10);
+    }
   }
 }
 
@@ -167,6 +193,10 @@ int main(void) {
   sei();
 
   mainDMX();
+  uint16_t val = 254;
+  setRGBWColor(val, val, val, val);
+  for (;;) {
+  }
   //  main4();
   return 0;
 }

@@ -46,7 +46,6 @@ SIGNAL(USART_RXC_vect) {
   } else {
     switch (dmxRxState) {
     case DMX_BREAK:
-      CLEAR_LED();
       if (dmxByte == 0) {
         dmxRxState = DMX_START_BYTE;
       } else {
@@ -61,6 +60,7 @@ SIGNAL(USART_RXC_vect) {
           dmxCount = 1;
           dmxRxState = DMX_START_ADDR;
           dmxData[0] = dmxByte;
+          SET_LED();
         } else {
           dmxRxState = DMX_IDLE;
         }
@@ -68,10 +68,10 @@ SIGNAL(USART_RXC_vect) {
       break;
 
     case DMX_START_ADDR:
-      TOGGLE_LED();
       dmxData[dmxCount++] = dmxByte;
       if (dmxCount >= dmxSize) {
         dmxRxState = DMX_IDLE;
+        CLEAR_LED();
       }
       break;
 
