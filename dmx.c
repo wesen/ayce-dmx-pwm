@@ -4,17 +4,22 @@
 #include "board.h"
 #include "dmx.h"
 
-dmx_state_t dmxState = DMX_IDLE;
+#ifdef DMX_RECEIVE
+dmx_rx_state_t dmxRxState = DMX_IDLE;
 static uint16_t dmxAddress = 0;
 static uint16_t dmxSize = 0;
 static uint8_t *dmxData = NULL;
 
-void initDMX(uint16_t _dmxAddress, uint8_t *_dmxData, uint16_t _dmxSize) {
-  UBRRH = ((F_CPU / (16 * DMX_BAUDRATE)) - 1) >> 8;
-  UBRRL = ((F_CPU / (16 * DMX_BAUDRATE)) - 1) & 0xFF;
+#define UART_BAUDRATE_REG (((F_CPU / 16L) / (DMX_BAUDRATE)) - 1)
+
+void initDMXRX(uint16_t _dmxAddress, uint8_t *_dmxData, uint16_t _dmxSize) {
+  UBRRH = ((UART_BAUDRATE_REG) >> 8) & 0xFF;
+  UBRRL = UART_BAUDRATE_REG & 0xFF;
   UCSRC = _BV(URSEL) | _BV(UCSZ1) | _BV(UCSZ0) | _BV(USBS); /* 8n2 */
   UCSRB = _BV(RXEN) | _BV(RXCIE); /* enabled receive */
-  dmxState = DMX_IDLE;
+  SET_BIT(DDRD, PD2);
+  CLEAR_BIT(PORTD, PD2); /* read enable */
+  dmxRxState = DMX_IDLE;
   setDMXAddress(_dmxAddress);
   setDMXData(_dmxData, _dmxSize);
 }
@@ -28,7 +33,7 @@ void setDMXData(uint8_t *_dmxData, uint16_t _dmxSize) {
   dmxSize = _dmxSize;
 }  
 
-SIGNAL(UART_RX_vect) {
+SIGNAL(USART_RXC_vect) {
   static uint16_t dmxCount;
   uint8_t uartState = UCSRA;
   uint8_t dmxByte = UDR;
@@ -37,14 +42,15 @@ SIGNAL(UART_RX_vect) {
   if (IS_BIT_SET(uartState, FE)) {
     CLEAR_BIT(UCSRA, FE);
     dmxCount = dmxAddress;
-    dmxState = DMX_BREAK;
+    dmxRxState = DMX_BREAK;
   } else {
-    switch (dmxState) {
+    switch (dmxRxState) {
     case DMX_BREAK:
+      CLEAR_LED();
       if (dmxByte == 0) {
-        dmxState = DMX_START_BYTE;
+        dmxRxState = DMX_START_BYTE;
       } else {
-        dmxState = DMX_IDLE;
+        dmxRxState = DMX_IDLE;
       }
       break;
 
@@ -53,18 +59,19 @@ SIGNAL(UART_RX_vect) {
         /* start address reached. */
         if (dmxData != NULL) {
           dmxCount = 1;
-          dmxState = DMX_START_ADDR;
+          dmxRxState = DMX_START_ADDR;
           dmxData[0] = dmxByte;
         } else {
-          dmxState = DMX_IDLE;
+          dmxRxState = DMX_IDLE;
         }
       }
       break;
 
     case DMX_START_ADDR:
+      TOGGLE_LED();
       dmxData[dmxCount++] = dmxByte;
       if (dmxCount >= dmxSize) {
-        dmxState = DMX_IDLE;
+        dmxRxState = DMX_IDLE;
       }
       break;
 
@@ -73,3 +80,4 @@ SIGNAL(UART_RX_vect) {
     }
   }
 }
+#endif /* DMX_RECEIVE */

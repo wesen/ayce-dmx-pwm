@@ -16,6 +16,8 @@ LDFLAGS = -m $(LDAVR_ARCH) -M
 F_CPU = 16000000L
 CFLAGS += -DF_CPU=$(F_CPU)
 
+CFLAGS += -DDMX_RECEIVE
+
 PROJ=ayce-dmx-pwm
 SRCS=main.c pwm.c dmx.c
 
@@ -37,6 +39,9 @@ $(PROJ).elf: $(SRCS:.c=.o)
 
 %.o: %.S
         $(CC) $(CFLAGS) -Wa,-adhlns=$@.lst -c $< -o $@
+
+%.s: %.c
+	$(CC) -S $(CFLAGS) -fverbose-asm $< -o $@
 
 %.d:%.c
 	set -e; $(CC) -MM $(CFLAGS) $< \

@@ -22,6 +22,11 @@ void setRGBWColorImmediate(uint16_t red, uint16_t green, uint16_t blue, uint16_t
 #define PWM3_PIN PD5
 #define PWM4_PIN PD6
 
+#define PWM_RED_PIN   PWM4_PIN
+#define PWM_BLUE_PIN  PWM3_PIN
+#define PWM_GREEN_PIN PWM2_PIN
+#define PWM_WHITE_PIN PWM1_PIN
+
 #define DMX_RE_PIN PD2
 
 #define ADDRESS1_PIN PC1

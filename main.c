@@ -43,7 +43,7 @@ void initBoard() {
   SET_BIT(PORTB, ADDRESS7_PIN);
   SET_BIT(PORTB, ADDRESS8_PIN);
 
-  initDMX(readAddress(), pwmData, 4);
+  //  initDMXRX(readAddress(), pwmData, 4);
 }
 
 /*
@@ -61,7 +61,7 @@ uint8_t readAddress() {
   address |= (IS_BIT_SET(PINB, ADDRESS7_PIN)) << 6;
   address |= (IS_BIT_SET(PINB, ADDRESS8_PIN)) << 7;
 
-  return address;
+  return address + 1;
 }
 
 /*
@@ -113,10 +113,19 @@ void main1(void) {
 }
 
 void main2(void) {
-  uint16_t address = readAddress();
-  address = 0xAAAA;
-  setRGBWColorImmediate(address, address, address, address);
   for (;;) {
+  uint16_t address = readAddress() << 2;
+  //  address = 0xAAAA;
+  setRGBWColorImmediate(address, address, address, address);
+    delay(100);
+  }
+}
+
+void main4(void) {
+  for (;;) {
+  uint8_t address = readAddress();
+  //  address = 0xAAAA;
+  setRGBWColor(address, address, address, address);
     delay(100);
   }
 }
@@ -154,8 +163,10 @@ void main3(void) {
 int main(void) {
   initBoard();
   initPWM();
+  initDMXRX(0, pwmData, 4);
   sei();
 
   mainDMX();
+  //  main4();
   return 0;
 }
