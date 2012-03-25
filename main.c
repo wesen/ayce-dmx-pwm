@@ -43,7 +43,7 @@ void initBoard() {
   SET_BIT(PORTB, ADDRESS7_PIN);
   SET_BIT(PORTB, ADDRESS8_PIN);
 
-  //  initDMXRX(readAddress(), pwmData, 4);
+  initDMXRX(readAddress(), pwmData, 4);
 }
 
 /*
@@ -82,7 +82,7 @@ uint16_t readLEDCurrent() {
 }
 
 extern uint16_t exptTable_10[256];
-                                 
+
 void mainDMX(void) {
   uint8_t address = readAddress();
   setDMXAddress(readAddress());
@@ -91,7 +91,7 @@ void mainDMX(void) {
   for (;;) {
     uint8_t address = readAddress();
     setDMXAddress(readAddress());
-    
+
     if (address == 0) {
       //      uint8_t address = readAddress();
       static int value = 0;
@@ -104,11 +104,10 @@ void mainDMX(void) {
       }
       setRGBWColor(value, value, value, value);
       value += direction;
-      delay(1);
     } else {
       setRGBWColor(pwmData[0], pwmData[1], pwmData[2], pwmData[3]);
-      delay(10);
     }
+    delay(10);
   }
 }
 
@@ -120,7 +119,7 @@ void main1(void) {
 
   int low = 0;
   int high = 2558;
-  
+
   int i = 0;
   int direction = 1;
   for (;;) {
@@ -189,7 +188,7 @@ void main3(void) {
 int main(void) {
   initBoard();
   initPWM();
-  initDMXRX(0, pwmData, 4);
+  //  initDMXRX(0, pwmData, 4);
   sei();
 
   mainDMX();

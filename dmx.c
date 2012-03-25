@@ -31,13 +31,14 @@ void setDMXAddress(uint16_t _dmxAddress) {
 void setDMXData(uint8_t *_dmxData, uint16_t _dmxSize) {
   dmxData = _dmxData;
   dmxSize = _dmxSize;
-}  
+}
 
 SIGNAL(USART_RXC_vect) {
   static uint16_t dmxCount;
   uint8_t uartState = UCSRA;
   uint8_t dmxByte = UDR;
-  
+
+
   /* check for framing error -> BREAK */
   if (IS_BIT_SET(uartState, FE)) {
     CLEAR_BIT(UCSRA, FE);
@@ -48,6 +49,7 @@ SIGNAL(USART_RXC_vect) {
     case DMX_BREAK:
       if (dmxByte == 0) {
         dmxRxState = DMX_START_BYTE;
+        SET_LED();
       } else {
         dmxRxState = DMX_IDLE;
       }
@@ -55,12 +57,12 @@ SIGNAL(USART_RXC_vect) {
 
     case DMX_START_BYTE:
       if (--dmxCount == 0) {
+        //        SET_LED();
         /* start address reached. */
         if (dmxData != NULL) {
           dmxCount = 1;
           dmxRxState = DMX_START_ADDR;
           dmxData[0] = dmxByte;
-          SET_LED();
         } else {
           dmxRxState = DMX_IDLE;
         }
@@ -71,13 +73,14 @@ SIGNAL(USART_RXC_vect) {
       dmxData[dmxCount++] = dmxByte;
       if (dmxCount >= dmxSize) {
         dmxRxState = DMX_IDLE;
-        CLEAR_LED();
       }
       break;
 
     case DMX_IDLE:
+      CLEAR_LED();
       break;
     }
   }
+
 }
 #endif /* DMX_RECEIVE */

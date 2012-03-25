@@ -6,8 +6,12 @@ OBJCOPY=avr-objcopy
 AVR_ARCH = atmega8
 LDAVR_ARCH = avrmega8
 AVRDUDE_ARCH = m8
-AVRDUDE_PROG ?= usbtiny
-
+#AVRDUDE_PROG ?= usbtiny
+#AVRDUDE_PORT ?= usb
+#AVRDUDE_PROG ?= jtag2isp
+#AVRDUDE_PORT ?= usb
+AVRDUDE_PROG ?= avrispmkII
+AVRDUDE_PORT ?= /dev/tty.usbserial
 CFLAGS += -Os -ffunction-sections -DAVR -I. -mmcu=$(AVR_ARCH)
 CFLAGS += -Wall -DLITTLE_ENDIAN
 CLDFLAGS += -Wl,--gc-sections -mmcu=$(AVR_ARCH)
@@ -57,18 +61,18 @@ $(PROJ).elf: $(SRCS:.c=.o)
 #### upload targets
 
 upload: clean $(PROJ).srec 
-	avrdude -V -p $(AVRDUDE_ARCH) -P usb -c $(AVRDUDE_PROG) -U flash:w:$(PROJ).srec
+	avrdude -V -p $(AVRDUDE_ARCH) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROG) -U flash:w:$(PROJ).srec
 
 verify: $(PROJ).srec $(PROJ).ee_srec
 	$(UISP) --segment=flash $(UISP_TARGET) --verify if=$(PROJ).srec
 
 init:
 #       enable watchdog, external crystal
-	$(AVRDUDE) -p $(AVRDUDE_ARCH) -P usb -c $(AVRDUDE_PROG) -U hfuse:w:0xd9:m -U lfuse:w:0xcf:m
+	$(AVRDUDE) -p $(AVRDUDE_ARCH) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROG) -U hfuse:w:0xd9:m -U lfuse:w:0xcf:m
 
 restart:
 #       read the fuses to reset the programming adapter
-	$(AVRDUDE) -p $(AVRDUDE_ARCH) -P usb -c $(AVRDUDE_PROG)
+	$(AVRDUDE) -p $(AVRDUDE_ARCH) -P $(AVRDUDE_PORT) -c $(AVRDUDE_PROG)
 
 clean:
 	rm -rf *.os *.o *.elf *.elfs *.lst *.hex
