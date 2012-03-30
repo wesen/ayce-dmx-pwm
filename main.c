@@ -30,7 +30,7 @@ void initBoard() {
 
   CLEAR_BIT(DDRB, ADDRESS6_PIN);
   CLEAR_BIT(DDRB, ADDRESS7_PIN);
-  CLEAR_BIT(DDRB, ADDRESS8_PIN);
+  //  CLEAR_BIT(DDRB, ADDRESS8_PIN);
 
   /* set pull up resistors. */
   SET_BIT(PORTC, ADDRESS1_PIN);
@@ -41,7 +41,7 @@ void initBoard() {
 
   SET_BIT(PORTB, ADDRESS6_PIN);
   SET_BIT(PORTB, ADDRESS7_PIN);
-  SET_BIT(PORTB, ADDRESS8_PIN);
+  //  SET_BIT(PORTB, ADDRESS8_PIN);
 
   initDMXRX(readAddress(), pwmData, 4);
 }
@@ -62,7 +62,7 @@ uint8_t readAddress() {
   address |= (IS_BIT_SET(val, ADDRESS5_PIN)) << 4;
   address |= (IS_BIT_SET(val2, ADDRESS6_PIN)) << 5;
   address |= (IS_BIT_SET(val2, ADDRESS7_PIN)) << 6;
-  address |= (IS_BIT_SET(val2, ADDRESS8_PIN)) << 7;
+  //  address |= (IS_BIT_SET(val2, ADDRESS8_PIN)) << 7;
 
   return address;
 }
